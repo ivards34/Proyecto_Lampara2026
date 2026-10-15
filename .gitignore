@@ -1,0 +1,26 @@
+# Agente de desarrollo (infraestructura del agente de IA, fuera del versionado)
+.agent/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+# Visual Studio
+.vs/
+*.user
+# VS Code
+.vscode/
+# Rider
+.idea/
+
+# .NET / .NET MAUI
+bin/
+obj/
+
+# draw.io (copias de seguridad del editor)
+*.drawio.bkp
+
+# Secretos locales (URL/claves de la API; cada miembro pone su copia)
+appsettings.Development.json
