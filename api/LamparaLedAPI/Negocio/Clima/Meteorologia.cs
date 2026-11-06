@@ -1,0 +1,25 @@
+﻿
+using Infraestructura.Meteorologia;
+using System.Threading.Tasks;
+
+namespace Negocio.Clima
+{
+    public class Meteorologia : IMeteorologia
+    {
+        private readonly IConnectorMeteorologiaAPI _conectorMeteorologia;
+
+        public Meteorologia(IConnectorMeteorologiaAPI conectorMeteorologiaAPI)
+        {
+            _conectorMeteorologia = conectorMeteorologiaAPI;
+        }
+
+        public async Task<DatosMeteorologiaDTO> ObtenerMeteorologiaActual(double latitud, double longitud)
+        {
+            var meteorologiaDTO = await _conectorMeteorologia.ObtenerDatosMeteorologia(latitud, longitud);
+
+            var datosMeteorologiaDTO = DatosMeteorologiaDTO.CopiarDatos(meteorologiaDTO);
+
+            return datosMeteorologiaDTO;
+        }
+    }
+}

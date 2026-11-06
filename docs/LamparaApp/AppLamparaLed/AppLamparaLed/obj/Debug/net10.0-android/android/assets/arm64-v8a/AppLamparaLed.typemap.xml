@@ -1,0 +1,10 @@
+<api type="debug" assembly-name="AppLamparaLed" mvid="5c799631db2a441ebfda0b69535c0e51">
+  <java-to-managed>
+    <entry java-name="crc642fa2b283baf7ee88/MainActivity" managed-name="AppLamparaLed.MainActivity, AppLamparaLed" managed-type-token-id="33554457" />
+    <entry java-name="crc642fa2b283baf7ee88/MainApplication" managed-name="AppLamparaLed.MainApplication, AppLamparaLed" managed-type-token-id="33554458" />
+  </java-to-managed>
+  <managed-to-java>
+    <entry java-name="crc642fa2b283baf7ee88/MainActivity" managed-name="AppLamparaLed.MainActivity, AppLamparaLed" managed-type-token-id="33554457" />
+    <entry java-name="crc642fa2b283baf7ee88/MainApplication" managed-name="AppLamparaLed.MainApplication, AppLamparaLed" managed-type-token-id="33554458" />
+  </managed-to-java>
+</api>

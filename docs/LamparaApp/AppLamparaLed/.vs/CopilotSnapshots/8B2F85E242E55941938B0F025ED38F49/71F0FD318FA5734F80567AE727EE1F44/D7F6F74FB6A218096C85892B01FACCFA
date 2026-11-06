@@ -1,0 +1,185 @@
+﻿using SkiaSharp;
+using SkiaSharp.Views.Maui;
+using SkiaSharp.Views.Maui.Controls;
+
+namespace AppLamparaLed.Controls;
+
+public class DualLineChartView : SKCanvasView
+{
+    public static readonly BindableProperty SensorDataProperty =
+        BindableProperty.Create(nameof(SensorData), typeof(List<double>), typeof(DualLineChartView),
+            new List<double>(), propertyChanged: (b, o, n) => ((DualLineChartView)b).InvalidateSurface());
+
+    public static readonly BindableProperty ApiDataProperty =
+        BindableProperty.Create(nameof(ApiData), typeof(List<double>), typeof(DualLineChartView),
+            new List<double>(), propertyChanged: (b, o, n) => ((DualLineChartView)b).InvalidateSurface());
+
+    public static readonly BindableProperty LabelsProperty =
+        BindableProperty.Create(nameof(Labels), typeof(List<string>), typeof(DualLineChartView),
+            new List<string>(), propertyChanged: (b, o, n) => ((DualLineChartView)b).InvalidateSurface());
+
+    public List<double> SensorData
+    {
+        get => (List<double>)GetValue(SensorDataProperty);
+        set => SetValue(SensorDataProperty, value);
+    }
+
+    public List<double> ApiData
+    {
+        get => (List<double>)GetValue(ApiDataProperty);
+        set => SetValue(ApiDataProperty, value);
+    }
+
+    public List<string> Labels
+    {
+        get => (List<string>)GetValue(LabelsProperty);
+        set => SetValue(LabelsProperty, value);
+    }
+
+    public DualLineChartView()
+    {
+        PaintSurface += OnPaintSurface;
+    }
+
+    private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
+    {
+        SKCanvas canvas = e.Surface.Canvas;
+        canvas.Clear(SKColors.Transparent);
+
+        if (SensorData == null || SensorData.Count == 0 || ApiData == null || ApiData.Count == 0)
+            return;
+
+        int count = Math.Min(SensorData.Count, ApiData.Count);
+        if (count < 2) return;
+
+        SKImageInfo info = e.Info;
+        float width = info.Width;
+        float height = info.Height;
+        float leftPadding = 55;  // Espacio para etiquetas Y
+        float rightPadding = 10;
+        float topPadding = 10;
+        float bottomPadding = 20;
+        float graphWidth = width - leftPadding - rightPadding;
+        float graphHeight = height - topPadding - bottomPadding;
+
+        // Find min/max values for scaling
+        double minValue = Math.Min(SensorData.Min(), ApiData.Min());
+        double maxValue = Math.Max(SensorData.Max(), ApiData.Max());
+        double range = maxValue - minValue;
+        if (range == 0) range = 1;
+
+        // Draw Y-axis line
+        using (var axisPaint = new SKPaint { Color = SKColors.DarkGray, StrokeWidth = 2 })
+        {
+            canvas.DrawLine(leftPadding, topPadding, leftPadding, topPadding + graphHeight, axisPaint);
+        }
+
+        // Draw Y-axis tick marks y etiquetas (usando pequeñas líneas como indicadores)
+        using (var tickPaint = new SKPaint { Color = SKColors.DarkGray, StrokeWidth = 1 })
+        {
+            for (int i = 0; i <= 4; i++)
+            {
+                float y = topPadding + (i * graphHeight) / 4;
+                canvas.DrawLine(leftPadding - 8, y, leftPadding, y, tickPaint);
+            }
+        }
+
+        // Draw grid lines horizontales (punteadas)
+        using (var gridPaint = new SKPaint 
+        { 
+            Color = SKColors.Gray, 
+            StrokeWidth = 0.5f, 
+            IsAntialias = true,
+            PathEffect = SKPathEffect.CreateDash(new float[] { 3, 3 }, 0)
+        })
+        {
+            for (int i = 0; i <= 4; i++)
+            {
+                float y = topPadding + (i * graphHeight) / 4;
+                canvas.DrawLine(leftPadding, y, leftPadding + graphWidth, y, gridPaint);
+            }
+        }
+
+        // Draw sensor line (red) - más gruesa para mejor visibilidad
+        using (var sensorPaint = new SKPaint 
+        { 
+            Color = SKColor.Parse("#FF0000"), 
+            StrokeWidth = 4.5f, 
+            IsAntialias = true, 
+            Style = SKPaintStyle.Stroke, 
+            StrokeCap = SKStrokeCap.Round,
+            StrokeJoin = SKStrokeJoin.Round
+        })
+        {
+            SKPath sensorPath = new SKPath();
+            for (int i = 0; i < count; i++)
+            {
+                float x = leftPadding + (i * graphWidth) / (count - 1);
+                float y = topPadding + graphHeight - (float)((SensorData[i] - minValue) / range * graphHeight);
+
+                if (i == 0)
+                    sensorPath.MoveTo(x, y);
+                else
+                    sensorPath.LineTo(x, y);
+            }
+            canvas.DrawPath(sensorPath, sensorPaint);
+        }
+
+        // Draw API line (blue) - más gruesa para mejor visibilidad
+        using (var apiPaint = new SKPaint 
+        { 
+            Color = SKColor.Parse("#0000FF"), 
+            StrokeWidth = 4.5f, 
+            IsAntialias = true, 
+            Style = SKPaintStyle.Stroke, 
+            StrokeCap = SKStrokeCap.Round,
+            StrokeJoin = SKStrokeJoin.Round
+        })
+        {
+            SKPath apiPath = new SKPath();
+            for (int i = 0; i < count; i++)
+            {
+                float x = leftPadding + (i * graphWidth) / (count - 1);
+                float y = topPadding + graphHeight - (float)((ApiData[i] - minValue) / range * graphHeight);
+
+                if (i == 0)
+                    apiPath.MoveTo(x, y);
+                else
+                    apiPath.LineTo(x, y);
+            }
+            canvas.DrawPath(apiPath, apiPaint);
+        }
+
+        // Draw sensorData circles at each point (para indicar puntos exactos)
+        using (var sensorPointPaint = new SKPaint 
+        { 
+            Color = SKColor.Parse("#FF0000"), 
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true
+        })
+        {
+            for (int i = 0; i < count; i++)
+            {
+                float x = leftPadding + (i * graphWidth) / (count - 1);
+                float y = topPadding + graphHeight - (float)((SensorData[i] - minValue) / range * graphHeight);
+                canvas.DrawCircle(x, y, 2.5f, sensorPointPaint);
+            }
+        }
+
+        // Draw API circles at each point
+        using (var apiPointPaint = new SKPaint 
+        { 
+            Color = SKColor.Parse("#0000FF"), 
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true
+        })
+        {
+            for (int i = 0; i < count; i++)
+            {
+                float x = leftPadding + (i * graphWidth) / (count - 1);
+                float y = topPadding + graphHeight - (float)((ApiData[i] - minValue) / range * graphHeight);
+                canvas.DrawCircle(x, y, 2.5f, apiPointPaint);
+            }
+        }
+    }
+}

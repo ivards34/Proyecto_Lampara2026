@@ -1,0 +1,85 @@
+[
+  {
+    "ContainingType": "Presentacion.Controllers.LamparaController",
+    "Method": "RecibirDatosLampara",
+    "RelativePath": "api/v1/Lampara",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "json",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Presentacion.Controllers.LamparaController",
+    "Method": "ObtenerLecturaActual",
+    "RelativePath": "api/v1/Lampara/actual",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Presentacion.Controllers.LamparaController",
+    "Method": "ConsultarESP32",
+    "RelativePath": "api/v1/Lampara/consultar",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Presentacion.Controllers.LamparaController",
+    "Method": "ObtenerTodasLecturas",
+    "RelativePath": "api/v1/Lampara/lecturas",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Presentacion.Controllers.LamparaController",
+    "Method": "CambiarModoLampara",
+    "RelativePath": "api/v1/Lampara/modo",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Presentacion.Controllers.ModoRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "LamparaLedAPI.Controllers.WeatherForecastController",
+    "Method": "Get",
+    "RelativePath": "WeatherForecast",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[LamparaLedAPI.WeatherForecast, Presentacion, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ],
+    "EndpointName": "GetWeatherForecast"
+  }
+]

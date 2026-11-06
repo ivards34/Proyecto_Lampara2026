@@ -1,0 +1,208 @@
+﻿using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Windows.Input;
+using System.Linq;
+using AppLamparaLed.Services;
+using AppLamparaLed.Models;
+using AppLamparaLed.Utilities;
+using Microcharts;
+using SkiaSharp;
+
+namespace AppLamparaLed.PageModels;
+
+public class HistoricoPageModel : INotifyPropertyChanged
+{
+    private readonly ILamparaService _lamparaService;
+    private DateTime _selectedDate = DateTime.Now;
+    private string _selectedPeriod = "Diario";
+    private List<LecturaHistorica> _allHistoricalData = new();
+    private List<LecturaHistorica> _filteredHistoricalData = new();
+    private bool _isLoading = false;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public HistoricoPageModel()
+    {
+        _lamparaService = new LamparaService();
+    }
+
+    public DateTime SelectedDate
+    {
+        get => _selectedDate;
+        set
+        {
+            _selectedDate = value;
+            OnPropertyChanged();
+            FilterDataByDate();
+        }
+    }
+
+    public string SelectedPeriod
+    {
+        get => _selectedPeriod;
+        set
+        {
+            _selectedPeriod = value;
+            OnPropertyChanged();
+            LoadDataAsync().FireAndForgetSafeAsync();
+        }
+    }
+
+    public LecturaHistorica LatestReading
+    {
+        get => _filteredHistoricalData.FirstOrDefault() ?? new LecturaHistorica();
+    }
+
+    public List<LecturaHistorica> HistoricalData
+    {
+        get => _filteredHistoricalData;
+        set
+        {
+            _filteredHistoricalData = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(LatestReading));
+        }
+    }
+
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set
+        {
+            _isLoading = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public List<string> Periods => new List<string> { "Diario", "Semanal", "Mensual" };
+
+    public List<double> TemperatureSensorData { get; private set; } = new();
+    public List<double> TemperatureApiData { get; private set; } = new();
+    public List<double> HumiditySensorData { get; private set; } = new();
+    public List<double> HumidityApiData { get; private set; } = new();
+    public List<string> TimeLabels { get; private set; } = new();
+
+    public ICommand RefreshCommand => new Command(async () => await LoadDataAsync());
+    public ICommand LoadDataCommand => new Command(async () => await LoadDataAsync());
+
+    public async Task LoadDataAsync()
+    {
+        if (IsLoading) return;
+
+        IsLoading = true;
+
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("HistoricoPageModel: Cargando datos históricos");
+            _allHistoricalData = await _lamparaService.ObtenerTodasLasLecturasAsync();
+            System.Diagnostics.Debug.WriteLine($"HistoricoPageModel: {_allHistoricalData.Count} lecturas obtenidas");
+
+            if (_allHistoricalData != null && _allHistoricalData.Any())
+            {
+                var latestReading = _allHistoricalData.OrderByDescending(r => r.FechaHora).FirstOrDefault();
+                if (latestReading != null)
+                {
+                    SelectedDate = latestReading.FechaHora;
+                    System.Diagnostics.Debug.WriteLine($"HistoricoPageModel: Fecha seleccionada ajustada a {SelectedDate}");
+                }
+            }
+
+            FilterDataByDate();
+            System.Diagnostics.Debug.WriteLine($"HistoricoPageModel: {_filteredHistoricalData.Count} lecturas después del filtro");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"HistoricoPageModel: Error cargando datos: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void FilterDataByDate()
+    {
+        System.Diagnostics.Debug.WriteLine($"FilterDataByDate - Periodo: {SelectedPeriod}, Fecha: {SelectedDate}");
+
+        if (_allHistoricalData == null || !_allHistoricalData.Any())
+        {
+            System.Diagnostics.Debug.WriteLine("No hay datos para filtrar");
+            HistoricalData = new List<LecturaHistorica>();
+            return;
+        }
+
+        System.Diagnostics.Debug.WriteLine($"Total de lecturas antes del filtro: {_allHistoricalData.Count}");
+
+        _filteredHistoricalData = SelectedPeriod switch
+        {
+            "Diario" => _allHistoricalData
+                .Where(d => d.FechaHora.Date == SelectedDate.Date)
+                .OrderBy(d => d.FechaHora)
+                .ToList(),
+            "Semanal" => _allHistoricalData
+                .Where(d => IsInSameWeek(d.FechaHora, SelectedDate))
+                .OrderBy(d => d.FechaHora)
+                .ToList(),
+            "Mensual" => _allHistoricalData
+                .Where(d => d.FechaHora.Year == SelectedDate.Year && d.FechaHora.Month == SelectedDate.Month)
+                .OrderBy(d => d.FechaHora)
+                .ToList(),
+            _ => _allHistoricalData.OrderBy(d => d.FechaHora).ToList()
+        };
+
+        System.Diagnostics.Debug.WriteLine($"Lecturas después del filtro: {_filteredHistoricalData.Count}");
+
+        if (_filteredHistoricalData.Any())
+        {
+            System.Diagnostics.Debug.WriteLine($"Primera lectura filtrada: {_filteredHistoricalData.First().FechaHora}");
+        }
+
+        OnPropertyChanged(nameof(HistoricalData));
+        OnPropertyChanged(nameof(LatestReading));
+        UpdateCharts();
+    }
+
+    private void UpdateCharts()
+    {
+        if (_filteredHistoricalData == null || !_filteredHistoricalData.Any())
+        {
+            TemperatureSensorData = new();
+            TemperatureApiData = new();
+            HumiditySensorData = new();
+            HumidityApiData = new();
+            TimeLabels = new();
+            OnPropertyChanged(nameof(TemperatureSensorData));
+            OnPropertyChanged(nameof(TemperatureApiData));
+            OnPropertyChanged(nameof(HumiditySensorData));
+            OnPropertyChanged(nameof(HumidityApiData));
+            OnPropertyChanged(nameof(TimeLabels));
+            return;
+        }
+
+        // Extract data
+        TemperatureSensorData = _filteredHistoricalData.Select(d => d.TemperaturaSensor).ToList();
+        TemperatureApiData = _filteredHistoricalData.Select(d => d.TemperaturaApi).ToList();
+        HumiditySensorData = _filteredHistoricalData.Select(d => d.HumedadSensor).ToList();
+        HumidityApiData = _filteredHistoricalData.Select(d => d.HumedadApi).ToList();
+        TimeLabels = _filteredHistoricalData.Select(d => d.FechaHora.ToString("HH:mm")).ToList();
+
+        OnPropertyChanged(nameof(TemperatureSensorData));
+        OnPropertyChanged(nameof(TemperatureApiData));
+        OnPropertyChanged(nameof(HumiditySensorData));
+        OnPropertyChanged(nameof(HumidityApiData));
+        OnPropertyChanged(nameof(TimeLabels));
+    }
+
+    private bool IsInSameWeek(DateTime date1, DateTime date2)
+    {
+        var cal = System.Globalization.DateTimeFormatInfo.CurrentInfo.Calendar;
+        var d1 = date1.Date.AddDays(-1 * (int)cal.GetDayOfWeek(date1));
+        var d2 = date2.Date.AddDays(-1 * (int)cal.GetDayOfWeek(date2));
+        return d1 == d2;
+    }
+
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+}

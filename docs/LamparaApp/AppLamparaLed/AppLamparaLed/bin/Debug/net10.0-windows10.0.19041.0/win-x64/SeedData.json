@@ -1,0 +1,15 @@
+{
+    "Categories": [
+        { "Title": "Temperatura", "Color": "#FF6B6B" },
+        { "Title": "Humedad", "Color": "#4ECDC4" },
+        { "Title": "Intensidad", "Color": "#FF9500" }
+    ],
+    "Tags": [
+        { "Title": "Frío", "Color": "#87CEEB" },
+        { "Title": "Templado", "Color": "#FF9500" },
+        { "Title": "Calor", "Color": "#FF6B6B" },
+        { "Title": "Baja", "Color": "#4ECDC4" },
+        { "Title": "Media", "Color": "#FF9500" },
+        { "Title": "Alta", "Color": "#FF6B6B" }
+    ]
+}

@@ -1,0 +1,6 @@
+@LamparaLedAPI_HostAddress = http://localhost:5159
+
+GET {{LamparaLedAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

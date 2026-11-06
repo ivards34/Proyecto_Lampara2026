@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pageModels="clr-namespace:AppLamparaLed.PageModels"
+             x:Class="AppLamparaLed.Pages.HistoricoDetallePage"
+             x:DataType="pageModels:HistoricoDetallePageModel"
+             Title="Histórico">
+
+    <ScrollView Orientation="Both">
+        <VerticalStackLayout Padding="20" Spacing="20">
+            
+            <!-- Header -->
+            <Label Text="{Binding SelectedDate, StringFormat='Histórico - {0:dd/MM}'}" 
+                   FontSize="20" 
+                   FontAttributes="Bold" 
+                   HorizontalOptions="Center"/>
+
+            <!-- Horizontal Graph -->
+            <Border StrokeShape="RoundRectangle 10" Padding="15" Background="{AppThemeBinding Light={StaticResource LightSecondaryBackground},Dark={StaticResource DarkSecondaryBackground}}" HeightRequest="400">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+                    
+                    <!-- Legend -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,*,Auto" ColumnSpacing="20">
+                        <BoxView Grid.Column="0" Color="#FF6B6B" WidthRequest="20" HeightRequest="20"/>
+                        <Label Grid.Column="1" Text="Temperatura" FontSize="14" VerticalOptions="Center"/>
+                        <BoxView Grid.Column="2" Color="#4ECDC4" WidthRequest="20" HeightRequest="20"/>
+                        <Label Grid.Column="3" Text="Humedad" FontSize="14" VerticalOptions="Center"/>
+                    </Grid>
+
+                    <!-- Graph Area -->
+                    <Grid Grid.Row="1" RowDefinitions="*,*" RowSpacing="5">
+                        <!-- Temperature Graph -->
+                        <VerticalStackLayout Grid.Row="0" Spacing="5">
+                            <Label Text="Temperatura (°C)" FontSize="12" TextColor="#FF6B6B"/>
+                            <Border Stroke="#FF6B6B" StrokeThickness="2" Padding="5" HeightRequest="150">
+                                <VerticalStackLayout>
+                                    <Label Text="Máx: 30°" FontSize="10"/>
+                                    <Label Text="Min: 20°" FontSize="10"/>
+                                    <Label Text="Prom: 23°" FontSize="10"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Humidity Graph -->
+                        <VerticalStackLayout Grid.Row="1" Spacing="5">
+                            <Label Text="Humedad (%)" FontSize="12" TextColor="#4ECDC4"/>
+                            <Border Stroke="#4ECDC4" StrokeThickness="2" Padding="5" HeightRequest="150">
+                                <VerticalStackLayout>
+                                    <Label Text="Máx: 70%" FontSize="10"/>
+                                    <Label Text="Min: 40%" FontSize="10"/>
+                                    <Label Text="Prom: 58%" FontSize="10"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <!-- Time Labels -->
+                    <Grid Grid.Row="2" ColumnDefinitions="*,*,*,*,*,*,*,*,*,*,*,*" ColumnSpacing="0">
+                        <Label Grid.Column="0" Text="0h" FontSize="10" HorizontalOptions="Center"/>
+                        <Label Grid.Column="2" Text="4h" FontSize="10" HorizontalOptions="Center"/>
+                        <Label Grid.Column="4" Text="8h" FontSize="10" HorizontalOptions="Center"/>
+                        <Label Grid.Column="6" Text="12h" FontSize="10" HorizontalOptions="Center"/>
+                        <Label Grid.Column="8" Text="16h" FontSize="10" HorizontalOptions="Center"/>
+                        <Label Grid.Column="10" Text="20h" FontSize="10" HorizontalOptions="Center"/>
+                    </Grid>
+
+                </Grid>
+            </Border>
+
+            <!-- Info -->
+            <Label Text="Gráfico de 24 horas" 
+                   FontSize="14" 
+                   TextColor="{AppThemeBinding Light={StaticResource Gray500},Dark={StaticResource Gray400}}"
+                   HorizontalTextAlignment="Center"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
