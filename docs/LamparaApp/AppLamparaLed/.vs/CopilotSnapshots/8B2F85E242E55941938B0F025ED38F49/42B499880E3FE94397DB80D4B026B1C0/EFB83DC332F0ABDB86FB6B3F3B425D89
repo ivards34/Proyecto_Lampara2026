@@ -1,8 +1,0 @@
-﻿namespace AppLamparaLed.Models;
-
-public class ChartModel
-{
-    public string? Time { get; set; }
-    public double Sensor { get; set; }
-    public double Api { get; set; }
-}

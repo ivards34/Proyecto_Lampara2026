@@ -40,7 +40,7 @@ float temperaturaActual = 20.0;     // Valor por defecto/inicial
 float humedadActual = 50.0;
 
 unsigned long previousMillisAPI = 0;
-const long intervalAPI = 15000;     // Intervalo para leer DHT (15 seg)
+const long intervalAPI = 5000;     // Intervalo para leer DHT (5 seg)
 
 // --- PROTOTIPOS DE FUNCIONES ---
 void imprimirHoraActual();
@@ -104,7 +104,7 @@ void loop()
   // ACTUALIZAR ESTADO DEL SENSOR TÁCTIL
   touch.update();
 
-  // CAMBIO DE MODO AL TOCAR EL SENSOR (.rose())
+  // CAMBIO DE MODO AL TOCAR EL SENSOR (touch.changed())
   if (touch.rose()) 
   { 
     funcionActual++;
