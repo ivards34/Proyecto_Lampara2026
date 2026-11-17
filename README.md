@@ -12,31 +12,43 @@ El sistema tiene tres partes que trabajan juntas: el firmware del ESP32, una API
 
 ![Diagrama de arquitectura](docs/diagrama-sistema.png)
 
+```mermaid
+flowchart LR
+    subgraph Hardware["Hardware / Firmware (ESP32-C3 mini)"]
+        DHT["Sensor DHT11<br/>temperatura y humedad"]
+        LED["Tira LED WS2812B<br/>128 LEDs"]
+        TOUCH["Sensor táctil<br/>cambio de modo"]
+        ESP["Servidor HTTP<br/>/api/v1/lampara"]
+    end
 
-+-------------------------------+              +-------------------------------+
-| Hardware / Firmware           |              | Backend / Web API (.NET 10)   |
-| (ESP32-C3 mini)               |              +-------------------------------+
-|                               |                    |                    |
-|  DHT11 --temp/humedad--> HTTP |  JSON estado       |  LamparaService    |
-|  Sensor tactil --> LED strip  | <--- /api/v1/lam.. |  + ClimaService    |
-|  WS2812B x128                 |                    |  EF Core + Npgsql  |
-|                               |                    |  ESP32Background   |
-|  WebServer :80 <--------------+-- GET /modo?id=N   |  (polling c/ N)    |
-+-------------------------------+                    +----------+---------+
-                                                                |         |
-                                                                v         v
-                                                       +------------+ +------------+
-                                                       | WeatherAPI | | PostgreSQL |
-                                                       | clima ext. | | lampara_   |
-                                                       +------------+ | lecturas   |
-                                                                      +------------+
+    subgraph Backend["Backend / Web API (.NET 10)"]
+        CTRL["LamparaController<br/>endpoints REST"]
+        NEG["Negocio<br/>LamparaService + ClimaService"]
+        INFRA["Infraestructura<br/>EF Core + Npgsql"]
+        BG["ESP32BackgroundService<br/>polling cada N min"]
+    end
 
-   +---------------------------+       +---------------------+
-   | App movil (.NET MAUI)     | ----> | LamparaController   | ---> Negocio
-   | Pantallas + HttpClient    | GET/  +---------------------+
-   +---------------------------+ POST
+    subgraph Data["Persistencia"]
+        DB[("PostgreSQL<br/>tabla lampara_lecturas")]
+    end
 
+    subgraph App["App móvil (.NET MAUI)"]
+        UI["Pantallas:<br/>Mi Lámpara · Histórico"]
+        SVC["LamparaService<br/>(HttpClient)"]
+    end
 
+    EXT["WeatherAPI<br/>(clima exterior)"]
+
+    DHT --> ESP
+    TOUCH --> LED
+    BG -->|GET cada IntervaloMinutos| ESP
+    ESP -->|JSON| NEG
+    NEG -->|temperatura/humedad| EXT
+    NEG --> INFRA --> DB
+    SVC -->|GET lecturas / POST modo| CTRL
+    CTRL --> NEG
+    UI --> SVC
+```
 
 ### Flujo del dato
 
@@ -144,13 +156,13 @@ dotnet build AppLamparaLed -f net10.0-android
 
 Todos los valores dependen de la red local, hay que ajustarlos:
 
-|                               Dónde                                |               Qué               |               Valor actual               |
-|--------------------------------------------------------------------|---------------------------------|------------------------------------------|
-| `api/.../appsettings.json` → `ConnectionStrings:DefaultConnection` | Cadena de conexión a PostgreSQL | `Host=localhost;...`                     |
-| `appsettings.json` → `ESP32:BaseUrl`                               | IP del ESP32                    | `http://192.168.1.102`                   |
-| `appsettings.json` → `ESP32:IntervaloMinutos`                      | Frecuencia de polling al ESP32  |  `30`                                    |
-| `appsettings.json` → `WeatherAPI:ApiKey` / `Ubicacion`             | Clima exterior                  | ver archivo                              |
-| `firmware .ino` → `ssid` / `password`                              | WiFi del ESP32                  | placeholder                              |
+|                               Dónde                                |               Qué               |       Valor actual       |
+|--------------------------------------------------------------------|---------------------------------|--------------------------|
+| `api/.../appsettings.json` → `ConnectionStrings:DefaultConnection` | Cadena de conexión a PostgreSQL | `Host=localhost;...`     |
+| `appsettings.json` → `ESP32:BaseUrl`                               | IP del ESP32                    | `http://192.168.1.102`   |
+| `appsettings.json` → `ESP32:IntervaloMinutos`                      | Frecuencia de polling al ESP32  |  `30`                    |
+| `appsettings.json` → `WeatherAPI:ApiKey` / `Ubicacion`             | Clima exterior                  | ver archivo              |
+| `firmware .ino` → `ssid` / `password`                              | WiFi del ESP32                  | placeholder              |
 | `app/.../Services/LamparaService.cs` → `ApiUrl`                    | IP de la PC donde corre la API  | `http://192.168.1.9:5000/api/v1/lampara` |
 
 > **Importante**: la PC que corre la API y el celular deben estar en la misma red WiFi, y la

@@ -7,33 +7,36 @@ Documento técnico de la arquitectura del sistema. Para una vista general ver el
 
 ![Diagrama de arquitectura](arquitectura.png)
 
+```mermaid
+flowchart LR
+    subgraph Hardware["Hardware / Firmware"]
+        DHT["DHT11"]
+        TOUCH["Sensor táctil"]
+        LEDS["WS2812B x128"]
+        WEB["WebServer :80<br/>/api/v1/lampara"]
+    end
 
-+-------------------+        +--------------------------+
-|  Hardware /       |        |  LamparaLedAPI (.NET 10) |
-|  Firmware (ESP32) |        +--------------------------+
-|                   |                   |                   |
-|  +-------------+  |   GET estado      |  LamparaService   |
-|  | DHT11       |  |<--- JSON ---------|                   |
-|  | Tactil      |  |                   |-----+-------------|
-|  | WS2812B x128|  |                   |     |             |
-|  | WebServer:80|  |<-- GET /modo?id=N |     |             |
-|  | /api/v1/... |  |                   |     |             |
-|  +-------------+  |                   v     v             v
-+-------------------+             +---------+ +--------+ +--------+
-                                  |ClimaSvc | |Repo    | |ESP32   |
-                                  +----+----+ +---+----+ |Client  |
-                                       |          |      +---+----+
-                                       v          v          |
-                                  +----------+ +---------------------+
-                                  |WeatherAPI| | PostgreSQL          |
-                                  +----------+ | lampara_lecturas    |
-                                               +---------------------+
+    subgraph API["LamparaLedAPI (.NET 10)"]
+        CTRL["LamparaController"]
+        LS["LamparaService"]
+        CS["ClimaService"]
+        REPO["LamparaRepository"]
+        ESPC["ESP32Client"]
+        BG["ESP32BackgroundService"]
+        DBCTX["LamparaDbContext (EF Core)"]
+    end
 
-   +------------------+
-   | App .NET MAUI    |-- GET/POST --> LamparaController --> LamparaService
-   +------------------+
+    PG[("PostgreSQL<br/>lampara_lecturas")]
+    WAPI["WeatherAPI"]
+    APP["App .NET MAUI"]
 
-
+    WEB -->|GET estado JSON| BG
+    BG --> LS
+    LS --> CS --> WAPI
+    LS --> REPO --> DBCTX --> PG
+    APP -->|GET/POST| CTRL --> LS
+    LS --> ESPC -->|GET /modo?id=N| WEB
+```
 
 ## Capas de la API
 
