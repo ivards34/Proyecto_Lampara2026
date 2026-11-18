@@ -7,7 +7,6 @@ namespace Infraestructura.WeatherAPI
 {
     public class ConectorWeatherAPI : IConnectorMeteorologiaAPI
     {
-        private const string API_KEY = "cc50f7e9318d4f59b69225451261404";
         private const string API_QUERY = "v1/current.json?key={0}&q={1},{2}&aqi=no";
 
         private readonly IHttpClientFactory _httpClientFactory;

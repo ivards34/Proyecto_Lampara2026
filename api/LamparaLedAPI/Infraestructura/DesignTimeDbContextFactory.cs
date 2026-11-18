@@ -7,8 +7,14 @@ namespace Infraestructura.Lampara
     {
         public LamparaDbContext CreateDbContext(string[] args)
         {
+            var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+                ?? Environment.GetEnvironmentVariable("DefaultConnection")
+                ?? throw new InvalidOperationException(
+                    "No se encontró la cadena de conexión. Defina la variable de entorno " +
+                    "'ConnectionStrings__DefaultConnection' antes de ejecutar 'dotnet ef'.");
+
             var optionsBuilder = new DbContextOptionsBuilder<LamparaDbContext>();
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=lamparadb;Username=postgres;Password=sebcheco1105");
+            optionsBuilder.UseNpgsql(connectionString);
             return new LamparaDbContext(optionsBuilder.Options);
         }
     }
