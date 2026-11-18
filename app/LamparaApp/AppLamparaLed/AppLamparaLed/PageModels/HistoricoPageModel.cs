@@ -4,7 +4,6 @@ using System.Windows.Input;
 using System.Linq;
 using AppLamparaLed.Services;
 using AppLamparaLed.Models;
-using AppLamparaLed.Utilities;
 using Microcharts;
 using SkiaSharp;
 
@@ -18,12 +17,13 @@ public class HistoricoPageModel : INotifyPropertyChanged
     private List<LecturaHistorica> _allHistoricalData = new();
     private List<LecturaHistorica> _filteredHistoricalData = new();
     private bool _isLoading = false;
+    private bool _isFirstLoad = true;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public HistoricoPageModel()
+    public HistoricoPageModel(ILamparaService lamparaService)
     {
-        _lamparaService = new LamparaService();
+        _lamparaService = lamparaService;
     }
 
     public DateTime SelectedDate
@@ -44,13 +44,13 @@ public class HistoricoPageModel : INotifyPropertyChanged
         {
             _selectedPeriod = value;
             OnPropertyChanged();
-            LoadDataAsync().FireAndForgetSafeAsync();
+            FilterDataByDate();
         }
     }
 
     public LecturaHistorica LatestReading
     {
-        get => _filteredHistoricalData.FirstOrDefault() ?? new LecturaHistorica();
+        get => _filteredHistoricalData.LastOrDefault() ?? new LecturaHistorica();
     }
 
     public List<LecturaHistorica> HistoricalData
@@ -101,14 +101,16 @@ public class HistoricoPageModel : INotifyPropertyChanged
             _allHistoricalData = await _lamparaService.ObtenerTodasLasLecturasAsync();
             System.Diagnostics.Debug.WriteLine($"HistoricoPageModel: {_allHistoricalData.Count} lecturas obtenidas");
 
-            if (_allHistoricalData != null && _allHistoricalData.Any())
+            if (_isFirstLoad && _allHistoricalData != null && _allHistoricalData.Any())
             {
                 var latestReading = _allHistoricalData.OrderByDescending(r => r.FechaHora).FirstOrDefault();
                 if (latestReading != null)
                 {
-                    SelectedDate = latestReading.FechaHora;
+                    _selectedDate = latestReading.FechaHora;
+                    OnPropertyChanged(nameof(SelectedDate));
                     System.Diagnostics.Debug.WriteLine($"HistoricoPageModel: Fecha seleccionada ajustada a {SelectedDate}");
                 }
+                _isFirstLoad = false;
             }
 
             FilterDataByDate();

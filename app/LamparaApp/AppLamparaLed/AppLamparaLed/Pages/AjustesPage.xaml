@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pageModels="clr-namespace:AppLamparaLed.PageModels"
+             xmlns:services="clr-namespace:AppLamparaLed.Services"
+             x:Class="AppLamparaLed.Pages.AjustesPage"
+             x:DataType="pageModels:AjustesPageModel"
+             Title="Ajustes">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <Border StrokeShape="RoundRectangle 10" Padding="15" Background="{AppThemeBinding Light={StaticResource LightSecondaryBackground},Dark={StaticResource DarkSecondaryBackground}}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="URL de la API" FontSize="16" FontAttributes="Bold"/>
+                    <Entry Text="{Binding ApiUrl}"
+                           Placeholder="{x:Static services:AppSettings.DefaultApiBaseUrl}"
+                           Keyboard="Url"
+                           HorizontalOptions="Fill"/>
+                    <Label Text="Dirección base del servidor que provee los datos de la lámpara."
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray500},Dark={StaticResource Gray400}}"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <Button Text="Guardar"
+                    Command="{Binding GuardarCommand}"
+                    HeightRequest="50"
+                    FontSize="16"
+                    FontAttributes="Bold"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

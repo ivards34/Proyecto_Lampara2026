@@ -210,17 +210,18 @@ public class DualLineChartView : SKCanvasView
                 PathEffect = SKPathEffect.CreateDash(new float[] { 8, 4 }, 0)
             })
             {
-                SKPath sensorPath = new SKPath();
+                using var builder = new SKPathBuilder();
                 for (int i = 0; i < count; i++)
                 {
                     float x = leftPadding + (i * graphWidth) / (count - 1);
                     float y = topPadding + graphHeight - (float)((_sensorData[i] - minValue) / range * graphHeight);
 
                     if (i == 0)
-                        sensorPath.MoveTo(x, y);
+                        builder.MoveTo(x, y);
                     else
-                        sensorPath.LineTo(x, y);
+                        builder.LineTo(x, y);
                 }
+                using SKPath sensorPath = builder.Detach();
                 canvas.DrawPath(sensorPath, sensorPaint);
             }
 
@@ -235,17 +236,18 @@ public class DualLineChartView : SKCanvasView
                 StrokeJoin = SKStrokeJoin.Round
             })
             {
-                SKPath apiPath = new SKPath();
+                using var builder = new SKPathBuilder();
                 for (int i = 0; i < count; i++)
                 {
                     float x = leftPadding + (i * graphWidth) / (count - 1);
                     float y = topPadding + graphHeight - (float)((_apiData[i] - minValue) / range * graphHeight);
 
                     if (i == 0)
-                        apiPath.MoveTo(x, y);
+                        builder.MoveTo(x, y);
                     else
-                        apiPath.LineTo(x, y);
+                        builder.LineTo(x, y);
                 }
+                using SKPath apiPath = builder.Detach();
                 canvas.DrawPath(apiPath, apiPaint);
             }
 

@@ -6,11 +6,11 @@ public partial class MiLamparaPage : ContentPage
 {
     private MiLamparaPageModel? _model;
 
-    public MiLamparaPage()
+    public MiLamparaPage(MiLamparaPageModel model)
     {
         InitializeComponent();
-        _model = new MiLamparaPageModel();
-        BindingContext = _model;
+        _model = model;
+        BindingContext = model;
     }
 
     protected override async void OnAppearing()

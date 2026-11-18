@@ -6,11 +6,11 @@ public partial class HistoricoPage : ContentPage
 {
     private HistoricoPageModel? _model;
 
-    public HistoricoPage()
+    public HistoricoPage(HistoricoPageModel model)
     {
         InitializeComponent();
-        _model = new HistoricoPageModel();
-        BindingContext = _model;
+        _model = model;
+        BindingContext = model;
     }
 
     protected override async void OnAppearing()

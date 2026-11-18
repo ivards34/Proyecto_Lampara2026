@@ -7,16 +7,16 @@ namespace AppLamparaLed.Services;
 public class LamparaService : ILamparaService
 {
     private readonly HttpClient _httpClient;
-    private const string ApiUrl = "http://192.168.1.9:5000/api/v1/lampara";
+    private string ApiUrl => AppSettings.ApiBaseUrl;
     private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public LamparaService()
+    public LamparaService(HttpClient httpClient)
     {
-        _httpClient = new HttpClient();
+        _httpClient = httpClient;
         _httpClient.Timeout = TimeSpan.FromSeconds(30);
     }
 

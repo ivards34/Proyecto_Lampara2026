@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using AppLamparaLed.Services;
-using AppLamparaLed.Utilities;
 using AppLamparaLed.Models;
 
 namespace AppLamparaLed.PageModels;
@@ -11,7 +10,7 @@ namespace AppLamparaLed.PageModels;
 public class MiLamparaPageModel : INotifyPropertyChanged
 {
     private readonly ILamparaService _lamparaService;
-    private string _selectedState = "Apagado";
+    private ModoLampara _selectedModo = ModoLampara.Apagado;
     private double _ambientTemperature = 0;
     private double _ambientHumidity = 0;
     private double _climateTemperature = 0;
@@ -20,17 +19,17 @@ public class MiLamparaPageModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public MiLamparaPageModel()
+    public MiLamparaPageModel(ILamparaService lamparaService)
     {
-        _lamparaService = new LamparaService();
+        _lamparaService = lamparaService;
     }
 
-    public string SelectedState
+    public ModoLampara SelectedModo
     {
-        get => _selectedState;
+        get => _selectedModo;
         set
         {
-            _selectedState = value;
+            _selectedModo = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsFullSelected));
             OnPropertyChanged(nameof(IsLuzTenueSelected));
@@ -39,10 +38,10 @@ public class MiLamparaPageModel : INotifyPropertyChanged
         }
     }
 
-    public bool IsFullSelected => SelectedState == "Full";
-    public bool IsLuzTenueSelected => SelectedState == "Luz Tenue";
-    public bool IsApagadoSelected => SelectedState == "Apagado";
-    public bool IsLamparaTemperaturaSelected => SelectedState == "Lámpara Temperatura";
+    public bool IsFullSelected => SelectedModo == ModoLampara.Full;
+    public bool IsLuzTenueSelected => SelectedModo == ModoLampara.LuzTenue;
+    public bool IsApagadoSelected => SelectedModo == ModoLampara.Apagado;
+    public bool IsLamparaTemperaturaSelected => SelectedModo == ModoLampara.LamparaTemperatura;
 
     public double AmbientTemperature
     {
@@ -94,8 +93,6 @@ public class MiLamparaPageModel : INotifyPropertyChanged
         }
     }
 
-    public List<string> LampStates => new List<string> { "Full", "Luz Tenue", "Apagado", "Lámpara Temperatura" };
-
     public ICommand SelectStateCommand => new Command<string>(async (state) => await SelectStateAsync(state));
     public ICommand NavigateToHistoricoCommand => new Command(async () =>
     {
@@ -118,18 +115,9 @@ public class MiLamparaPageModel : INotifyPropertyChanged
         if (IsLoading) return;
 
         IsLoading = true;
-        SelectedState = state;
+        SelectedModo = state.DesdeTexto();
 
-        int modoId = state switch
-        {
-            "Full" => 1,
-            "Luz Tenue" => 2,
-            "Lámpara Temperatura" => 3,
-            "Apagado" => 4,
-            _ => 4
-        };
-
-        var success = await _lamparaService.CambiarModoAsync(modoId);
+        var success = await _lamparaService.CambiarModoAsync((int)SelectedModo);
 
         if (!success)
         {
@@ -147,21 +135,7 @@ public class MiLamparaPageModel : INotifyPropertyChanged
         if (currentData != null)
         {
             System.Diagnostics.Debug.WriteLine($"Datos actualizados después de cambio de modo: {currentData.FechaHora}");
-
-            string currentState = currentData.EstadoLampara switch
-            {
-                "1" => "Full",
-                "2" => "Luz Tenue",
-                "3" => "Lámpara Temperatura",
-                "4" => "Apagado",
-                _ => "Apagado"
-            };
-            SelectedState = currentState;
-
-            AmbientTemperature = currentData.TemperaturaSensor;
-            AmbientHumidity = currentData.HumedadSensor;
-            ClimateTemperature = currentData.TemperaturaApi;
-            ClimateHumidity = currentData.HumedadApi;
+            AplicarLectura(currentData);
         }
 
         IsLoading = false;
@@ -180,22 +154,7 @@ public class MiLamparaPageModel : INotifyPropertyChanged
             {
                 System.Diagnostics.Debug.WriteLine($"Datos actuales obtenidos: {currentData.FechaHora}");
                 System.Diagnostics.Debug.WriteLine($"Datos: TempSensor={currentData.TemperaturaSensor}, HumSensor={currentData.HumedadSensor}, TempApi={currentData.TemperaturaApi}, HumApi={currentData.HumedadApi}");
-
-                string currentState = currentData.EstadoLampara switch
-                {
-                    "1" => "Full",
-                    "2" => "Luz Tenue",
-                    "3" => "Lámpara Temperatura",
-                    "4" => "Apagado",
-                    _ => "Apagado"
-                };
-                SelectedState = currentState;
-
-                AmbientTemperature = currentData.TemperaturaSensor;
-                AmbientHumidity = currentData.HumedadSensor;
-                ClimateTemperature = currentData.TemperaturaApi;
-                ClimateHumidity = currentData.HumedadApi;
-
+                AplicarLectura(currentData);
                 System.Diagnostics.Debug.WriteLine($"Datos actualizados: TempAmb={AmbientTemperature}, HumAmb={AmbientHumidity}, TempClima={ClimateTemperature}, HumClima={ClimateHumidity}");
             }
             else
@@ -229,21 +188,7 @@ public class MiLamparaPageModel : INotifyPropertyChanged
             if (currentData != null)
             {
                 System.Diagnostics.Debug.WriteLine($"Datos actualizados después de refresh: {currentData.FechaHora}");
-
-                string currentState = currentData.EstadoLampara switch
-                {
-                    "1" => "Full",
-                    "2" => "Luz Tenue",
-                    "3" => "Lámpara Temperatura",
-                    "4" => "Apagado",
-                    _ => "Apagado"
-                };
-                SelectedState = currentState;
-
-                AmbientTemperature = currentData.TemperaturaSensor;
-                AmbientHumidity = currentData.HumedadSensor;
-                ClimateTemperature = currentData.TemperaturaApi;
-                ClimateHumidity = currentData.HumedadApi;
+                AplicarLectura(currentData);
             }
         }
         catch (Exception ex)
@@ -252,62 +197,13 @@ public class MiLamparaPageModel : INotifyPropertyChanged
         }
     }
 
-    private async Task LoadCurrentLampStateAsync()
+    private void AplicarLectura(LecturaHistorica lectura)
     {
-        try
-        {
-            System.Diagnostics.Debug.WriteLine("Cargando estado actual de la lámpara...");
-            var readings = await _lamparaService.ObtenerTodasLasLecturasAsync();
-            System.Diagnostics.Debug.WriteLine($"Lecturas obtenidas: {readings?.Count ?? 0}");
-
-            if (readings != null && readings.Count > 0)
-            {
-                var latestReading = readings.OrderByDescending(r => r.FechaHora).FirstOrDefault();
-                if (latestReading != null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Lectura más reciente: {latestReading.FechaHora}, Estado: {latestReading.EstadoLampara}");
-                    System.Diagnostics.Debug.WriteLine($"Datos: TempSensor={latestReading.TemperaturaSensor}, HumSensor={latestReading.HumedadSensor}, TempApi={latestReading.TemperaturaApi}, HumApi={latestReading.HumedadApi}");
-
-                    string currentState = latestReading.EstadoLampara switch
-                    {
-                        "1" => "Full",
-                        "2" => "Luz Tenue",
-                        "3" => "Lámpara Temperatura",
-                        "4" => "Apagado",
-                        _ => "Apagado"
-                    };
-                    SelectedState = currentState;
-
-                    AmbientTemperature = latestReading.TemperaturaSensor;
-                    AmbientHumidity = latestReading.HumedadSensor;
-                    ClimateTemperature = latestReading.TemperaturaApi;
-                    ClimateHumidity = latestReading.HumedadApi;
-
-                    System.Diagnostics.Debug.WriteLine($"Datos actualizados: TempAmb={AmbientTemperature}, HumAmb={AmbientHumidity}, TempClima={ClimateTemperature}, HumClima={ClimateHumidity}");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("No se encontró lectura más reciente");
-                }
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine("No hay lecturas disponibles - usando valores por defecto");
-                AmbientTemperature = 25;
-                AmbientHumidity = 60;
-                ClimateTemperature = 20;
-                ClimateHumidity = 70;
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error cargando estado actual: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"Usando valores por defecto");
-            AmbientTemperature = 25;
-            AmbientHumidity = 60;
-            ClimateTemperature = 20;
-            ClimateHumidity = 70;
-        }
+        SelectedModo = lectura.EstadoLampara.DesdeEstado();
+        AmbientTemperature = lectura.TemperaturaSensor;
+        AmbientHumidity = lectura.HumedadSensor;
+        ClimateTemperature = lectura.TemperaturaApi;
+        ClimateHumidity = lectura.HumedadApi;
     }
 
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)

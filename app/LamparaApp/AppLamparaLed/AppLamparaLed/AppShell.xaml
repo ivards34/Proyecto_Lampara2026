@@ -16,6 +16,10 @@
         <ShellContent ContentTemplate="{DataTemplate pages:HistoricoPage}" Route="historico" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Ajustes" Icon="{StaticResource IconSettings}">
+        <ShellContent ContentTemplate="{DataTemplate pages:AjustesPage}" Route="ajustes" />
+    </FlyoutItem>
+
     <Shell.FlyoutFooter>
         <Grid Padding="15">
             <sf:SfSegmentedControl x:Name="ThemeSegmentedControl"
