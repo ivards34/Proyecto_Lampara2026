@@ -58,8 +58,8 @@ void cambiarModoAPI();     // NUEVA FUNCIÓN para recibir órdenes de la API
 void aplicarModo(int modo);
 
 // Sustituir con datos de tu red
-const char* ssid     = "Sosa";
-const char* password = "bartolo2";
+const char* ssid     = "laboratorio";
+const char* password = "laboratorio";
 
 void setup() {
   delay(2000); // Tiempo de seguridad para ESP32-C3

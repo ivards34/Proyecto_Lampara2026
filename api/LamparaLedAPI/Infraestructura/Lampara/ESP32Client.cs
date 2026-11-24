@@ -11,7 +11,11 @@ namespace Infraestructura.Lampara
         public ESP32Client(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _baseUrl = configuration["ESP32:BaseUrl"] ?? "http://192.168.1.18";
+            _baseUrl = configuration["ESP32:BaseUrl"];
+            if (string.IsNullOrWhiteSpace(_baseUrl))
+            {
+                throw new InvalidOperationException("Configure ESP32:BaseUrl en User Secrets o mediante una variable de entorno.");
+            }
         }
 
         public async Task<string> ObtenerDatosLamparaAsync()
