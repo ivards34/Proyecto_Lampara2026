@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diseño de la App — Proyecto Lámpara LED (Ivar)</title>
+<style>
+  :root{--azul:#1a237e;--azul2:#283593;--azul3:#3949ab;--ok:#2e7d32;--warn:#e65100;--gris:#666;--linea:#e0e0e0;}
+  *{box-sizing:border-box;}
+  body{font-family:'Helvetica Neue',Arial,sans-serif;line-height:1.6;color:#333;max-width:960px;margin:0 auto;padding:32px 24px;background:#fafafa;}
+  header{border-bottom:3px solid var(--azul);padding-bottom:16px;margin-bottom:8px;}
+  h1{color:var(--azul);font-size:26px;margin:0 0 4px;}
+  .sub{color:var(--gris);font-size:14px;}
+  h2{color:var(--azul2);font-size:19px;border-bottom:1px solid var(--linea);padding-bottom:6px;margin-top:34px;}
+  h3{color:var(--azul3);font-size:15px;margin-top:22px;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;background:#fff;}
+  th{background:var(--azul);color:#fff;padding:9px 12px;text-align:left;}
+  td{border:1px solid var(--linea);padding:9px 12px;vertical-align:top;}
+  tr:nth-child(even){background:#f5f5f5;}
+  code{background:#f5f5f5;padding:2px 6px;border-radius:3px;font-family:'Courier New',monospace;font-size:13px;color:#c62828;}
+  blockquote{border-left:4px solid #ff9800;background:#fff8e1;padding:10px 16px;margin:16px 0;font-style:italic;color:#555;}
+  ul{padding-left:22px;} li{margin-bottom:5px;}
+  .cards{display:flex;flex-wrap:wrap;gap:14px;margin:16px 0;}
+  .card{flex:1 1 300px;border:1px solid var(--linea);border-radius:8px;padding:14px 16px;background:#fff;}
+  .card.ok{border-left:5px solid var(--ok);} .card.out{border-left:5px solid var(--warn);}
+  .card h3{margin-top:0;}
+  .screen{border:1px solid var(--linea);border-radius:8px;background:#fff;padding:16px 18px;margin:14px 0;border-top:4px solid var(--azul3);}
+  .screen h3{margin-top:0;color:var(--azul);}
+  .tempbar{height:20px;border-radius:6px;background:linear-gradient(90deg,#4fc3f7,#e0e0e0,#e53935);margin:6px 0;}
+  .chip{display:inline-block;padding:3px 12px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;margin:2px;}
+  footer{margin-top:40px;padding-top:14px;border-top:2px solid var(--linea);color:var(--gris);font-size:12px;text-align:center;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Diseño de la App — Proyecto Lámpara LED</h1>
+  <div class="sub">Ivar · Lámpara LED con sensor de temperatura/humedad (ESP32) · Foco: prototipo de pantallas · 2026</div>
+</header>
+
+<blockquote>Este documento se centra <strong>solo en la app MAUI</strong>. El ESP32, el sensor y el panel LED <strong>no los desarrolla el alumno</strong>: la app <strong>consume</strong> la API y <strong>envía</strong> el estado/intensidad.</blockquote>
+
+<blockquote><strong>Ajustes acordados:</strong> <strong>4 estados</strong> (Full, Regulación %, Apagado, Automático); la lámpara se <strong>colorea según temperatura</strong>; <strong>indicador de conexión</strong> (heartbeat); tiempo real con <strong>comparación interna vs externa</strong>; histórico por <strong>día</strong> con calendario + gráfico horizontal de dos líneas y dos escalas.</blockquote>
+
+<h2>1. Alcance del trabajo</h2>
+<div class="cards">
+  <div class="card ok">
+    <h3>✅ Lo que trabajás con el profe</h3>
+    <ul>
+      <li>Prototipo de las pantallas.</li>
+      <li>Temperatura, humedad y estado en tiempo real.</li>
+      <li>Control de estados (4) y regulación de intensidad.</li>
+      <li>Histórico por día con su gráfico.</li>
+    </ul>
+  </div>
+  <div class="card out">
+    <h3>🚫 Contexto externo (no lo hacés)</h3>
+    <ul>
+      <li>El ESP32 y su firmware.</li>
+      <li>El sensor y el panel LED.</li>
+      <li>Cómo la lámpara gestiona el estado Automático.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>2. Pantallas a prototipar</h2>
+
+<div class="screen">
+  <h3>1 · Principal (tiempo real + estados)</h3>
+  <ul>
+    <li><strong>Indicador de conexión</strong> (arriba): "Conectada / Desconectada" (posible heartbeat).</li>
+    <li><strong>Lámpara coloreada según temperatura</strong> (celeste = frío → rojo = calor).</li>
+    <li><strong>Temperatura y humedad</strong> ambiente en tarjetas.</li>
+    <li><strong>Comparación interna (lámpara) vs externa (clima)</strong> — estilo Weather App.</li>
+    <li><strong>4 estados de luz:</strong> Full, Regulación %, Apagado, Automático (los 1-3 desde el teléfono; el 4º lo gestiona la lámpara).</li>
+    <li><strong>Slider de intensidad (%)</strong> para la regulación.</li>
+    <li>Botón para ir al Histórico.</li>
+  </ul>
+</div>
+
+<div class="screen">
+  <h3>2 · Histórico (por día)</h3>
+  <ul>
+    <li><strong>Calendario / selector de fecha</strong> arriba.</li>
+    <li><strong>Gráfico</strong> abajo (scrolleable): dos líneas (temperatura y humedad) con <strong>dos escalas</strong> (izq/der, estilo Excel) y <strong>eje X = hora del día</strong>.</li>
+    <li>Sugerencia: <strong>girar el teléfono a horizontal</strong> para ver el gráfico completo.</li>
+  </ul>
+</div>
+
+<h2>3. Elementos de diseño destacados</h2>
+
+<h3>Los 4 estados de la lámpara</h3>
+<table>
+  <thead><tr><th>Estado</th><th>Quién lo controla</th><th>Ícono</th></tr></thead>
+  <tbody>
+    <tr><td>Full (intensidad máxima)</td><td>Teléfono</td><td>🌕</td></tr>
+    <tr><td>Regulación de intensidad (%)</td><td>Teléfono (define el %)</td><td>🎚</td></tr>
+    <tr><td>Apagado total</td><td>Teléfono</td><td>🌑</td></tr>
+    <tr><td>Automático</td><td>La lámpara sola</td><td>🤖 (se muestra distinto)</td></tr>
+  </tbody>
+</table>
+
+<h3>Mapa de temperatura (color de la lámpara)</h3>
+<div class="tempbar"></div>
+<span class="chip" style="background:#4fc3f7;">Frío (celeste)</span>
+<span class="chip" style="background:#e53935;">Calor (rojo)</span>
+
+<h3>Indicador de conexión</h3>
+<p>Punto de color + texto "Conectada / Desconectada". Posible implementación como <strong>heartbeat</strong>: si no llega un latido en X segundos, se marca como desconectada.</p>
+
+<h3>Base de datos del histórico</h3>
+<p>Tabla simple: <strong><code>time_day</code></strong> (clave), <strong>temperatura</strong>, <strong>humedad</strong>. La lámpara guarda automáticamente. Granularidad por <strong>día</strong> para que el gráfico no quede comprimido.</p>
+
+<h2>4. Consideraciones a acordar</h2>
+<ul>
+  <li><strong>Estado activo:</strong> claro cuál de los 4 está seleccionado y cuál es el Automático.</li>
+  <li><strong>Feedback del POST:</strong> mostrar que el cambio se envió.</li>
+  <li><strong>Gráfico de dos escalas:</strong> librería (Microcharts <code>LineChart</code> o dibujo propio) y cómo se ven las dos escalas.</li>
+  <li><strong>Orientación:</strong> soportar horizontal en el histórico.</li>
+  <li><strong>Estados vacíos y de carga.</strong></li>
+  <li><strong>Paleta y tipografía.</strong></li>
+</ul>
+
+<h2>5. Actividades concretas</h2>
+<table>
+  <thead><tr><th>#</th><th>Actividad</th><th>Entregable</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Diseñar los 4 estados y el slider de intensidad</td><td>Mockup del control</td></tr>
+    <tr><td>2</td><td>Diseñar el mapa de temperatura (color de la lámpara)</td><td>Muestra de color</td></tr>
+    <tr><td>3</td><td>Diseñar el indicador de conexión (heartbeat)</td><td>Componente en el mockup</td></tr>
+    <tr><td>4</td><td>Diseñar la comparación interna vs externa</td><td>Mockup de tiempo real</td></tr>
+    <tr><td>5</td><td>Diseñar el histórico (calendario + gráfico dos líneas/dos escalas, horizontal)</td><td>Mockup del histórico</td></tr>
+    <tr><td>6</td><td>Pasar la pantalla principal a XAML</td><td>Pantalla en XAML</td></tr>
+  </tbody>
+</table>
+
+<footer>Programación III — Aplicaciones Móviles con .NET MAUI — Ciclo Lectivo 2026</footer>
+</body>
+</html>

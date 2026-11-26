@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guía paso a paso por pantalla — Proyecto Lámpara LED (Ivar)</title>
+<style>
+  :root{--azul:#1a237e;--azul2:#283593;--azul3:#3949ab;--verde:#2e7d32;--gris:#666;--linea:#e0e0e0;}
+  *{box-sizing:border-box;}
+  body{font-family:'Helvetica Neue',Arial,sans-serif;line-height:1.6;color:#333;max-width:960px;margin:0 auto;padding:32px 24px;background:#fafafa;}
+  header{border-bottom:3px solid var(--azul);padding-bottom:16px;margin-bottom:8px;}
+  h1{color:var(--azul);font-size:26px;margin:0 0 4px;}
+  .sub{color:var(--gris);font-size:14px;}
+  h2{color:#fff;background:var(--azul);font-size:18px;padding:10px 14px;border-radius:8px 8px 0 0;margin:34px 0 0;}
+  .pantalla{border:1px solid var(--linea);border-radius:0 0 8px 8px;background:#fff;padding:16px 18px;margin-bottom:10px;}
+  .obj{background:#e8eaf6;border-radius:6px;padding:8px 12px;font-size:14px;margin-bottom:14px;}
+  .obj b{color:var(--azul);}
+  ol.steps{list-style:none;counter-reset:s;padding:0;margin:0;}
+  ol.steps > li{counter-increment:s;position:relative;padding:12px 12px 12px 44px;border-left:2px solid #e8eaf6;margin-left:14px;}
+  ol.steps > li::before{content:counter(s);position:absolute;left:-15px;top:12px;width:28px;height:28px;background:var(--azul3);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+  .st-title{font-weight:700;color:var(--azul);font-size:14px;}
+  .inv{font-size:13px;margin-top:3px;}
+  .inv b{color:#c62828;}
+  .apl{font-size:13px;margin-top:3px;background:#e8f5e9;border-radius:5px;padding:4px 8px;color:#1b5e20;}
+  .apl b{color:#1b5e20;}
+  .reuse{display:inline-block;background:#fff3e0;color:#e65100;border-radius:10px;padding:1px 9px;font-size:11px;font-weight:700;margin-top:4px;}
+  code{background:#f5f5f5;padding:2px 6px;border-radius:3px;font-family:'Courier New',monospace;font-size:12.5px;color:#c62828;}
+  .reusables{background:#fff;border:1px solid var(--linea);border-radius:8px;padding:16px 18px;margin:16px 0;}
+  .reusables h3{color:var(--azul);margin:0 0 8px;font-size:16px;}
+  .rb{border-left:4px solid var(--verde);background:#f1f8f1;border-radius:0 6px 6px 0;padding:8px 12px;margin-bottom:8px;font-size:13px;}
+  .rb b{color:var(--verde);}
+  .intro{background:#e8eaf6;border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;}
+  footer{margin-top:40px;padding-top:14px;border-top:2px solid var(--linea);color:var(--gris);font-size:12px;text-align:center;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Guía paso a paso por pantalla — Proyecto Lámpara LED</h1>
+  <div class="sub">Ivar · Temperatura/humedad + control de luz (ESP32) · Cómo armar cada pantalla y qué investigar · 2026</div>
+</header>
+
+<div class="intro">
+  <strong>Cómo usar esta guía.</strong> Cada pantalla tiene un <b>objetivo</b> y un <b>paso a paso numerado</b>. En cada paso: <b style="color:#c62828;">Investigar</b> (lo que buscás porque lo vas a usar ahí) y <b style="color:#1b5e20;">Cómo queda aplicado</b> (qué se ve al terminar). Lo que <span class="reuse">REUTILIZA</span> algo ya hecho está marcado. Empezá por los <b>Bloques reutilizables</b>.
+</div>
+
+<div class="reusables">
+  <h3>🧩 Bloques reutilizables (armalos una vez)</h3>
+  <div class="rb"><b>Servicio de API (<code>ApiService</code>)</b> — hace los GET (temperatura/humedad/estado) y el POST del estado. <b style="color:#c62828;">Investigar:</b> <code>HttpClient</code>, <code>async/await</code>, <code>System.Text.Json</code>. Ver <code>Guia_API_y_Visualizacion.md</code>.</div>
+  <div class="rb"><b>Tarjeta de dato</b> — recuadro "valor + etiqueta" (temperatura, humedad). Se usa en la principal.</div>
+  <div class="rb"><b>Color por temperatura</b> — convierte una temperatura en un color (celeste→rojo). Se usa para colorear la lámpara.</div>
+  <div class="rb"><b>Indicador de conexión (heartbeat)</b> — punto verde/rojo según si llegan datos. Aparece en todas las pantallas.</div>
+</div>
+
+<!-- PRINCIPAL: tiempo real -->
+<h2>💡 Pantalla 1 — Principal (tiempo real)</h2>
+<div class="pantalla">
+  <div class="obj"><b>Objetivo:</b> mostrar temperatura, humedad y la comparación interna (lámpara) vs externa (clima), con la lámpara coloreada por temperatura.</div>
+  <ol class="steps">
+    <li>
+      <div class="st-title">Maquetar las tarjetas de dato</div>
+      <div class="inv"><b>Investigar:</b> <code>Grid</code>, <code>Border</code>, <code>Label</code>.</div>
+      <div class="apl"><b>Aplicado:</b> se ven los espacios para temperatura, humedad y estado.</div>
+    </li>
+    <li>
+      <div class="st-title">Traer los datos (GET)</div>
+      <div class="inv"><b>Investigar:</b> GET a la clase <code>Medicion {Temp, Humedad}</code>, deserializar; carga y error con <code>ActivityIndicator</code> y <code>try/catch</code>.</div>
+      <div class="apl"><b>Aplicado:</b> las tarjetas muestran los datos reales.</div>
+      <span class="reuse">USA el ApiService</span>
+    </li>
+    <li>
+      <div class="st-title">Comparar interna vs externa</div>
+      <div class="inv"><b>Investigar:</b> dos valores (interno de la lámpara / externo del clima), cómo mostrarlos lado a lado (estilo Weather App).</div>
+      <div class="apl"><b>Aplicado:</b> se ven las dos temperaturas juntas para compararlas.</div>
+    </li>
+    <li>
+      <div class="st-title">Colorear la lámpara según temperatura</div>
+      <div class="inv"><b>Investigar:</b> mapear un número a un color (celeste→rojo), <code>Color.Lerp</code> o rangos con <code>if</code>.</div>
+      <div class="apl"><b>Aplicado:</b> el ícono de la lámpara cambia de color según la temperatura.</div>
+      <span class="reuse">Crea el Color por temperatura</span>
+    </li>
+    <li>
+      <div class="st-title">Indicador de conexión (heartbeat)</div>
+      <div class="inv"><b>Investigar:</b> <code>IDispatcherTimer</code>; si no llega un dato en X segundos, marcar desconectada.</div>
+      <div class="apl"><b>Aplicado:</b> arriba se ve "Conectada" (verde) o "Desconectada" (rojo).</div>
+      <span class="reuse">Crea el Indicador de conexión (se reusa en Histórico)</span>
+    </li>
+  </ol>
+</div>
+
+<!-- PRINCIPAL: estados -->
+<h2>🎚 Pantalla 1 (cont.) — Estados de la lámpara (4)</h2>
+<div class="pantalla">
+  <div class="obj"><b>Objetivo:</b> elegir el estado de la luz y enviarlo a la lámpara.</div>
+  <ol class="steps">
+    <li>
+      <div class="st-title">Selector de 4 estados</div>
+      <div class="inv"><b>Investigar:</b> marcar el activo; mostrar "Automático" distinto (lo gestiona la lámpara, no el teléfono).</div>
+      <div class="apl"><b>Aplicado:</b> se tocan los 4 estados y uno queda resaltado.</div>
+    </li>
+    <li>
+      <div class="st-title">Slider de intensidad (%)</div>
+      <div class="inv"><b>Investigar:</b> <code>Slider</code>, <code>Value</code>, mostrar el porcentaje.</div>
+      <div class="apl"><b>Aplicado:</b> se elige la intensidad para el estado de regulación.</div>
+    </li>
+    <li>
+      <div class="st-title">Enviar el estado (POST)</div>
+      <div class="inv"><b>Investigar:</b> armar <code>{estado, intensidad}</code>, serializar a JSON, <code>PostAsync</code>.</div>
+      <div class="apl"><b>Aplicado:</b> al cambiar el estado, se envía a la API y se confirma.</div>
+      <span class="reuse">USA el ApiService</span>
+    </li>
+  </ol>
+</div>
+
+<!-- HISTORICO -->
+<h2>📈 Pantalla 2 — Histórico (por día)</h2>
+<div class="pantalla">
+  <div class="obj"><b>Objetivo:</b> ver la evolución de temperatura y humedad de un día en un gráfico de dos líneas.</div>
+  <ol class="steps">
+    <li>
+      <div class="st-title">Selector de fecha (calendario)</div>
+      <div class="inv"><b>Investigar:</b> <code>DatePicker</code> o vista de calendario, evento de cambio de fecha.</div>
+      <div class="apl"><b>Aplicado:</b> al elegir un día, se pedirán sus datos.</div>
+    </li>
+    <li>
+      <div class="st-title">Traer los datos del día (GET) y dibujar el gráfico de dos líneas</div>
+      <div class="inv"><b>Investigar:</b> GET que devuelve datos por hora; Microcharts <code>LineChart</code> (o <code>GraphicsView</code>); cómo manejar dos escalas (izquierda temperatura, derecha humedad) y el eje X en horas.</div>
+      <div class="apl"><b>Aplicado:</b> se ven dos líneas (temperatura y humedad) con sus escalas y las horas del día.</div>
+      <span class="reuse">USA el ApiService</span>
+    </li>
+    <li>
+      <div class="st-title">Ver en horizontal (landscape)</div>
+      <div class="inv"><b>Investigar:</b> orientación de pantalla en MAUI, layout responsive; calendario arriba, gráfico abajo con scroll.</div>
+      <div class="apl"><b>Aplicado:</b> al girar el teléfono, el gráfico se ve completo.</div>
+    </li>
+    <li>
+      <div class="st-title">Guardado local (SQLite)</div>
+      <div class="inv"><b>Investigar:</b> <code>sqlite-net-pcl</code>, tabla simple <code>time_day</code> (clave) + temperatura + humedad.</div>
+      <div class="apl"><b>Aplicado:</b> el gráfico se dibuja aunque no haya conexión. La lámpara guarda automáticamente.</div>
+    </li>
+  </ol>
+</div>
+
+<!-- NAVEGACION -->
+<h2>🧭 Transversal — Navegación</h2>
+<div class="pantalla">
+  <div class="obj"><b>Objetivo:</b> pasar entre la principal y el histórico.</div>
+  <ol class="steps">
+    <li>
+      <div class="st-title">Botón de navegación</div>
+      <div class="inv"><b>Investigar:</b> <code>Shell</code>/<code>GoToAsync</code>, rutas.</div>
+      <div class="apl"><b>Aplicado:</b> un botón lleva de la principal al histórico y viceversa.</div>
+    </li>
+  </ol>
+</div>
+
+<footer>Programación III — Aplicaciones Móviles con .NET MAUI — Ciclo Lectivo 2026</footer>
+</body>
+</html>
