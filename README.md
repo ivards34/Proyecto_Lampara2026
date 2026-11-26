@@ -1,159 +1,197 @@
-# Proyecto Lámpara 2026 (Lámpara LED)
+# Proyecto Lámpara LED 2026
 
-**Proyecto Lámpara 2026** es un proyecto académico que combina una **lámpara LED con
-un microcontrolador ESP32** y un **sensor de temperatura y humedad** con una
-**aplicación móvil**. El ESP32 mide las condiciones del ambiente y controla el panel
-LED; publica las mediciones a una API, y la app **LamparaApp** permite ver la
-temperatura y la humedad del ambiente y **controlar el estado de la luz** desde el
-teléfono.
+Lámpara LED inteligente basada en ESP32 que mide la temperatura y humedad del ambiente,
+la compara con el clima exterior (WeatherAPI) y permite controlar el modo de iluminación
+desde una aplicación móvil. Integra tres áreas: **Microcontroladores II**, **Programación
+Web** y **Aplicaciones Móviles**.
 
-## Contexto
+## Arquitectura
 
-El proyecto se desarrolla en el marco de **Programación III — Aplicaciones Móviles con
-.NET MAUI** (ciclo lectivo 2026). El trabajo del alumno en esta materia es la
-**aplicación móvil**; el firmware del ESP32 y la API se desarrollan en el marco de
-**otra materia** y se incluyen aquí solo como contexto del proyecto integral.
+El sistema tiene tres partes que trabajan juntas: el firmware del ESP32, una API REST en
+.NET y una app móvil en .NET MAUI.
 
-El problema que resuelve: monitorear las condiciones del ambiente (temperatura y
-humedad) y controlar la iluminación de la lámpara de forma remota desde el celular.
+![Diagrama de arquitectura](docs/diagrama-sistema.png)
 
-## Descripción general
+```mermaid
+flowchart LR
+    subgraph Hardware["Hardware / Firmware (ESP32-C3 mini)"]
+        DHT["Sensor DHT11<br/>temperatura y humedad"]
+        LED["Tira LED WS2812B<br/>128 LEDs"]
+        TOUCH["Sensor táctil<br/>cambio de modo"]
+        ESP["Servidor HTTP<br/>/api/v1/lampara"]
+    end
 
-El sistema funciona como una cadena de medición, publicación y control:
+    subgraph Backend["Backend / Web API (.NET 10)"]
+        CTRL["LamparaController<br/>endpoints REST"]
+        NEG["Negocio<br/>LamparaService + ClimaService"]
+        INFRA["Infraestructura<br/>EF Core + Npgsql"]
+        BG["ESP32BackgroundService<br/>polling cada N min"]
+    end
 
-1. El **ESP32** mide temperatura y humedad del ambiente y controla el **panel LED**.
-2. El ESP32 publica las mediciones en la **API (LamparaApi)**.
-3. **LamparaApp** consume la API: lee temperatura/humedad y estado (GET) y envía el
-   estado/intensidad de la luz elegido por el usuario (POST).
+    subgraph Data["Persistencia"]
+        DB[("PostgreSQL<br/>tabla lampara_lecturas")]
+    end
 
-```text
-Sensor + panel LED
-        │
-        ▼
-      ESP32  ──publica──►  LamparaApi  ◀──GET / POST──►  LamparaApp (móvil)
-                               │
-                               ▼
-                         base de datos
+    subgraph App["App móvil (.NET MAUI)"]
+        UI["Pantallas:<br/>Mi Lámpara · Histórico"]
+        SVC["LamparaService<br/>(HttpClient)"]
+    end
+
+    EXT["WeatherAPI<br/>(clima exterior)"]
+
+    DHT --> ESP
+    TOUCH --> LED
+    BG -->|GET cada IntervaloMinutos| ESP
+    ESP -->|JSON| NEG
+    NEG -->|temperatura/humedad| EXT
+    NEG --> INFRA --> DB
+    SVC -->|GET lecturas / POST modo| CTRL
+    CTRL --> NEG
+    UI --> SVC
 ```
 
-> El estado **Automático** de la luz lo gestiona la propia lámpara; los demás estados
-> los controla el usuario desde la app.
+### Flujo del dato
 
-## Componentes
+1. El ESP32 lee el DHT11 cada 5 segundos y expone un servidor HTTP con el estado actual
+   (temperatura, humedad y modo de luz).
+2. La API consulta al ESP32 periódicamente (`ESP32BackgroundService`, configurable con
+   `ESP32:IntervaloMinutos`), enriquece la lectura con el clima exterior de WeatherAPI y
+   guarda todo en PostgreSQL.
+3. La app móvil consume la API: muestra la última lectura, el histórico con gráficos y
+   permite cambiar el modo de la lámpara.
+4. Para cambiar el modo, la app hace `POST /api/v1/Lampara/modo`, la API reenvía la orden
+   al ESP32 (`GET /api/v1/lampara/modo?id=N`) y la lámpara aplica el color.
 
-### LamparaApp — Aplicación móvil
+### Modos de iluminación
 
-Aplicación móvil (materia Aplicaciones Móviles / Programación III) que informa el clima
-del ambiente medido por la lámpara y permite controlar la luz.
+| ID | Modo                | Descripción                                                 |
+|----|---------------------|-------------------------------------------------------------|
+|  1 | Full                | Blanco completo                                             |
+|  2 | Luz Tenue           | Blanco al ~23% de intensidad                                |
+|  3 | Lámpara Temperatura | Color según temperatura: azul/celeste (frío) → rojo (calor) |
+|  4 | Apagado             | LEDs apagados                                               |
 
-- **Tecnología:** .NET MAUI (C#).
-- **Pantallas:**
-  - *Principal*: indicador de conexión, lámpara coloreada según la temperatura
-    (celeste = frío → rojo = calor), temperatura y humedad del ambiente, comparación
-    interna (lámpara) vs externa (clima), 4 estados de luz y slider de intensidad.
-  - *Histórico*: calendario para elegir el día y un gráfico de dos líneas (temperatura
-    y humedad) con dos escalas y el eje X por hora.
-- **Estados de la luz:** Full, Regulación de intensidad (%), Apagado (los tres desde el
-  teléfono) y Automático (lo gestiona la lámpara).
-- **Relación con la API:** consume temperatura/humedad y estado (GET) y envía el
-  estado/intensidad de la luz (POST).
-- **Ubicación:** `src/LamparaApp/` (código) y `docs/LamparaApp/` (relevamiento, diseño
-  y ejercicios). Prácticas previas en `ejercicios/`.
-- **Estado:** en desarrollo (etapa de ejercicios; app sin iniciar).
+El modo también se puede cambiar físicamente tocando el sensor táctil del ESP32.
 
-### Firmware ESP32 — Lámpara y sensor
+## Tecnologías utilizadas
 
-Firmware del microcontrolador ESP32 que lee el sensor de temperatura/humedad, controla
-el panel LED y publica las mediciones a la API.
-
-- **Alcance:** se desarrolla en **otra materia**; se incluye como contexto.
-- **Ubicación:** `firmware/`.
-- **Estado:** fuera del alcance de esta materia; pendiente de documentar aquí.
-
-### LamparaApi — API REST
-
-API que recibe las mediciones del ESP32, las almacena y las expone a la app.
-
-- **Responsabilidad:** entregar temperatura/humedad y estado actual (GET) y recibir el
-  estado/intensidad de la luz (POST).
-- **Alcance:** se desarrolla en **otra materia**; se incluye como contexto.
-- **Ubicación:** `api/`.
-- **Estado:** fuera del alcance de esta materia; contrato (URL, JSON) pendiente.
-
-## Modelo de datos (app)
-
-| Entidad | Campos |
-| ------- | ------ |
-| `Medicion` | `time_day` (clave), `temperatura`, `humedad` |
-| `EstadoLuz` | `estado` (Full / Regulacion / Apagado / Automatico), `intensidad` (%) |
-
-El histórico usa una tabla simple (`time_day`, `temperatura`, `humedad`); la lámpara
-guarda las mediciones automáticamente.
-
-## Tecnologías
-
-| Componente | Tecnologías |
-| ---------- | ----------- |
-| LamparaApp (APP) | .NET MAUI, C# |
-| Firmware ESP32 | ESP32 (otra materia) |
-| LamparaApi | API REST (otra materia) |
+- **Hardware**: ESP32-C3 mini, sensor DHT11 (temperatura/humedad), tira de LEDs WS2812B
+  (128 LEDs), sensor táctil capacitivo
+- **Firmware**: C++ (Arduino core ESP32), FastLED, DHT, Bounce2, WebServer, NTP
+- **Backend**: C#, .NET 10, ASP.NET Core Web API, Entity Framework Core, Npgsql
+- **Base de datos**: PostgreSQL
+- **API externa**: WeatherAPI (clima actual de la ubicación configurada)
+- **App móvil**: .NET MAUI (Android / iOS / Windows / MacCatalyst), CommunityToolkit.Mvvm,
+  Microcharts + SkiaSharp para gráficos
 
 ## Estructura del repositorio
 
-```text
-Proyecto_Lampara2026/
-├── README.md           → este documento: mapa general del proyecto
-├── AGENTS.md           → reglas para el agente de IA de desarrollo
-├── .gitignore
-├── docs/               → documentación del proyecto
-│   ├── Documentacion_de_proyecto_2026(Lampara_Led).docx
-│   ├── proyectolapmara2026.drawio   → diagrama de arquitectura
-│   ├── LamparaApp/     → relevamiento, diseño y ejercicios de la app
-│   ├── mockups/        → prototipos de pantallas
-│   └── capturas/       → screenshots de la app funcionando
-├── ejercicios/         → prácticas pequeñas previas (una carpeta por ejercicio)
-├── src/                → código de la app MAUI (LamparaApp)
-├── firmware/           → firmware ESP32 (otra materia)
-└── api/                → API REST LamparaApi (otra materia)
+```
+├── firmware/LamparaLed_ESP32/   # Código Arduino del ESP32 (.ino)
+├── api/LamparaLedAPI/           # Solución .NET en capas: Presentacion / Negocio / Infraestructura
+├── app/LamparaApp/              # Solución .NET MAUI (AppLamparaLed)
+├── docs/                        # Documentación técnica (arquitectura, contrato de API)
+├── capturas/                    # Capturas de pantalla de la app (app/capturas)
+└── proyectolapmara2026.drawio   # Diagrama original del proyecto
 ```
 
-## Documentación
+La API sigue una **arquitectura en capas** con dependencias en un solo sentido:
+`Presentacion → Negocio → Infraestructura`.
 
-General:
+- **Presentacion**: controllers REST, `Program.cs` (DI, pipeline) y
+  `ESP32BackgroundService` (polling al ESP32).
+- **Negocio**: `LamparaService` (orquesta guardado y consultas) y `ClimaService`
+  (WeatherAPI).
+- **Infraestructura**: `LamparaDbContext` (EF Core), `LamparaRepository`, `ESP32Client`
+  (HttpClient hacia el ESP32) y migraciones.
 
-- [Diagrama del proyecto (draw.io)](docs/proyectolapmara2026.drawio) — arquitectura y relaciones entre componentes.
-- [Documentación del proyecto (.docx)](docs/Documentacion_de_proyecto_2026%28Lampara_Led%29.docx)
+## Requisitos previos
 
-Aplicación (`docs/LamparaApp/`):
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- **Para la app MAUI**: Android SDK + JDK 17 (o workloads de .NET MAUI instalados con
+  `dotnet workload install maui`)
+- **Para el firmware**: Arduino IDE 2.x con el core de ESP32 (ESP32C3) y las librerías
+  FastLED, DHT sensor library, Bounce2
+- **Base de datos**: PostgreSQL corriendo localmente (o accesible por red)
+- Un ESP32-C3 con el circuito armado (ver `firmware/README.md`)
 
-- [Ficha de relevamiento](docs/LamparaApp/Ficha_Relevamiento.md) — qué hace la app, pantallas, entidades y API.
-- [Actividades de diseño de la app](docs/LamparaApp/Actividades_Diseño_App.md) — diseño de pantallas y elementos.
-- [Ejercicios por pantalla](docs/LamparaApp/Ejercicios_Por_Pantalla.md) — práctica por concepto.
-- [Prototipo de pantallas](docs/LamparaApp/Prototipo_Pantallas.html) — maqueta visual.
+## Cómo ejecutar
 
-## Ejecución
+### 1. Base de datos
 
-**LamparaApp (APP)** — en desarrollo (etapa de ejercicios). Al crear el proyecto MAUI
-se abrirá la solución en Visual Studio y se ejecutará, o se compilará con
-`dotnet build` (SDK de .NET).
+Crear la base `lamparadb` en PostgreSQL. Las tablas se crean con las migraciones de EF Core
+automáticamente al primer `GET`/`POST` si la base existe, o manualmente con:
 
-**Firmware ESP32** y **LamparaApi** — se desarrollan en otra materia; se documentará su
-ejecución cuando se incorporen al repositorio.
+```bash
+cd api/LamparaLedAPI/Presentacion
+dotnet ef database update
+```
+
+### 2. API
+
+```bash
+cd api/LamparaLedAPI
+dotnet run --project Presentacion
+```
+
+La API queda escuchando en `http://0.0.0.0:5000` (todas las interfaces, para que la app y
+el ESP32 la alcancen desde la red local). En desarrollo, OpenAPI/Swagger está disponible.
+
+### 3. App móvil
+
+```bash
+cd app/LamparaApp/AppLamparaLed
+dotnet build AppLamparaLed -f net10.0-android
+# o desde Visual Studio: proyecto AppLamparaLed -> Ejecutar en emulador/dispositivo Android
+```
+
+### 4. Firmware
+
+1. Abrir `firmware/LamparaLed_ESP32/LamparaLed_ESP32.ino` en Arduino IDE.
+2. Configurar `ssid` y `password` de tu WiFi (líneas ~61-62 del `.ino`).
+3. Seleccionar placa **ESP32C3 Dev Module** y el puerto correspondiente.
+4. Subir el sketch. Anotar la IP que imprime el Monitor Serie.
+
+## Configuración
+
+Todos los valores dependen de la red local, hay que ajustarlos:
+
+|                               Dónde                                |               Qué               |       Valor actual       |
+|--------------------------------------------------------------------|---------------------------------|--------------------------|
+| `api/.../appsettings.json` → `ConnectionStrings:DefaultConnection` | Cadena de conexión a PostgreSQL | `Host=localhost;...`     |
+| `appsettings.json` → `ESP32:BaseUrl`                               | IP del ESP32                    | `http://192.168.1.102`   |
+| `appsettings.json` → `ESP32:IntervaloMinutos`                      | Frecuencia de polling al ESP32  |  `30`                    |
+| `appsettings.json` → `WeatherAPI:ApiKey` / `Ubicacion`             | Clima exterior                  | ver archivo              |
+| `firmware .ino` → `ssid` / `password`                              | WiFi del ESP32                  | placeholder              |
+| `app/.../Services/LamparaService.cs` → `ApiUrl`                    | IP de la PC donde corre la API  | `http://192.168.1.9:5000/api/v1/lampara` |
+
+> **Importante**: la PC que corre la API y el celular deben estar en la misma red WiFi, y la
+> API debe escuchar en `0.0.0.0` (ya configurado en `Program.cs`).
 
 ## Estado del proyecto
 
-- [ ] **LamparaApp** (APP) — en desarrollo: etapa de ejercicios; pantallas sin iniciar
-- [ ] **Firmware ESP32** — otra materia; pendiente de incorporar aquí
-- [ ] **LamparaApi** — otra materia; contrato (URL, JSON) pendiente
+**Hecho:**
+- Firmware: servidor HTTP en el ESP32, 4 modos de luz, cambio por sensor táctil, lectura
+  DHT11 cada 5 s, hora por NTP.
+- API: endpoints REST, polling automático al ESP32, persistencia en PostgreSQL,
+  integración con WeatherAPI.
+- App: pantallas **Mi Lámpara** (estado actual, comparación interno/externo, cambio de
+  modo) e **Histórico** (gráficos de temperatura/humedad por día, semana y mes).
 
-## Git y trabajo en equipo
+**Pendiente / a mejorar:**
+- La app incluye páginas y modelos del template de MAUI que todavía no se usan
+  (`MainPage`, `ProjectListPage`, `TaskDetailPage`, etc.).
+- No hay autenticación en la API.
+- Las credenciales de red y la API key están en texto plano en los archivos de
+  configuración (usar placeholders o variables de entorno).
 
-- `main` se mantiene estable.
-- Commits frecuentes y descriptivos, en presente (ej.: `agrega pantalla Principal`,
-  `conecta GET de temperatura`).
-- El README se mantiene actualizado: es la cara del proyecto.
-- No subir archivos generados (`bin/`, `obj/`) ni secretos (usar `.gitignore`).
+## Documentación adicional
 
----
+- [Arquitectura detallada](docs/arquitectura.md)
+- [Contrato de la API](docs/contrato-api.md)
+- [README de firmware](firmware/README.md) · [README de la API](api/README.md) ·
+  [README de la app](app/README.md)
 
-*Programación III — Aplicaciones Móviles con .NET MAUI — Ciclo Lectivo 2026*
+## Autor
+
+Ivar Sosa — Proyecto integrador Lámpara LED 2026.
