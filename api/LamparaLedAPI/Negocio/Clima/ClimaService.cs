@@ -1,45 +1,30 @@
-using Infraestructura.WeatherAPI;
-using Microsoft.Extensions.Configuration;
-using System.Text.Json;
+using Infraestructura.Meteorologia;
 using System.Threading.Tasks;
 
 namespace Negocio.Clima
 {
     public class ClimaService : IClimaService
     {
-        private readonly HttpClient _httpClient;
-        private readonly string _apiKey;
+        private readonly IConnectorMeteorologiaAPI _conectorMeteorologia;
 
-        public ClimaService(HttpClient httpClient, IConfiguration configuration)
+        public ClimaService(IConnectorMeteorologiaAPI conectorMeteorologia)
         {
-            _httpClient = httpClient;
-            _apiKey = configuration["WeatherAPI:ApiKey"] ?? "";
+            _conectorMeteorologia = conectorMeteorologia;
         }
 
         public async Task<ClimaDTO> ObtenerClimaActual(string ubicacion)
         {
-            if (string.IsNullOrWhiteSpace(_apiKey))
-            {
-                throw new System.Exception("La API key de WeatherAPI no está configurada");
-            }
+            var meteorologiaDTO = await _conectorMeteorologia.ObtenerDatosMeteorologia(ubicacion);
 
-            string url = $"http://api.weatherapi.com/v1/current.json?key={_apiKey}&q={ubicacion}&aqi=no";
-
-            var response = await _httpClient.GetAsync(url);
-            response.EnsureSuccessStatusCode();
-
-            var content = await response.Content.ReadAsStringAsync();
-            var weatherResponse = JsonSerializer.Deserialize<WeatherAPIResponse>(content);
-
-            if (weatherResponse?.Current == null)
+            if (meteorologiaDTO == null)
             {
                 throw new System.Exception("No se pudo obtener los datos del clima");
             }
 
             return new ClimaDTO
             {
-                Temperatura = weatherResponse.Current.TempC,
-                Humedad = weatherResponse.Current.Humidity
+                Temperatura = meteorologiaDTO.TemperaturaCelsius,
+                Humedad = meteorologiaDTO.Humedad
             };
         }
     }

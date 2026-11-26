@@ -9,9 +9,13 @@ consulta el clima exterior (WeatherAPI) y sirve los datos a la app móvil.
 ```
 LamparaLedAPI/
 ├── LamparaLedAPI.slnx
-├── Presentacion/      # Controllers, Program.cs, ESP32BackgroundService
-├── Negocio/           # LamparaService, ClimaService (orquestación)
-└── Infraestructura/   # LamparaDbContext (EF Core + Npgsql), ESP32Client, migraciones
+├── Presentacion/      # Controllers (LamparaController), Program.cs (DI, pipeline),
+│                      # ESP32BackgroundService (sondeo al ESP32)
+├── Negocio/           # LamparaService (orquestación), ClimaService (IClimaService),
+│                      # DTOs (DatosLamparaDTO, ClimaDTO)
+└── Infraestructura/   # LamparaDbContext (EF Core + Npgsql), LamparaRepository,
+                       # ESP32Client (IESP32Client), ConectorWeatherAPI
+                       # (IConnectorMeteorologiaAPI), migraciones
 ```
 
 ## Requisitos
@@ -31,6 +35,7 @@ LamparaLedAPI/
   },
   "WeatherAPI": {
     "ApiKey": "[api-key]",
+    "BaseUrl": "http://api.weatherapi.com/",
     "Ubicacion": "Eduardo Castex, Argentina"
   },
   "ESP32": {
@@ -45,7 +50,7 @@ Ajustar según la red local:
 - `ESP32:BaseUrl` → IP que imprimió el ESP32 al arrancar.
 - `ESP32:IntervaloMinutos` → cada cuánto el `ESP32BackgroundService` consulta al ESP32.
 - `ConnectionStrings` → credenciales de PostgreSQL.
-- `WeatherAPI:ApiKey` / `Ubicacion` → clima de referencia.
+- `WeatherAPI:ApiKey` / `BaseUrl` / `Ubicacion` → credenciales, URL base y ubicación del servicio meteorológico.
 
 > En producción usar variables de entorno o User Secrets en lugar de valores reales en
 > `appsettings.json`.
@@ -84,4 +89,4 @@ Ver el [contrato completo de la API](../docs/contrato-api.md). Resumen:
 
 ## Cómo fluye el dato
 
-`ESP32BackgroundService` consulta al ESP32 cada `IntervaloMinutos` → `LamparaService` enriquece con WeatherAPI → `LamparaRepository` guarda en PostgreSQL → la app consume los endpoints `GET`.
+`ESP32BackgroundService` consulta al ESP32 cada `IntervaloMinutos` → `LamparaService` obtiene clima vía `IClimaService` → `IConnectorMeteorologiaAPI` → `ConectorWeatherAPI` (WeatherAPI) → `LamparaRepository` guarda en PostgreSQL → la app consume los endpoints `GET`.

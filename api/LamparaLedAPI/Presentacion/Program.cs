@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Infraestructura.Lampara;
+using Infraestructura.Meteorologia;
+using Infraestructura.WeatherAPI;
 using Negocio.Lampara;
 using Negocio.Clima;
 using Microsoft.Extensions.DependencyInjection;
-using ClimaService = Negocio.Clima.ClimaService;
-using IClimaService = Negocio.Clima.IClimaService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,11 +23,15 @@ builder.Services.AddHttpClient();
 
 // Registrar servicios de la capa de Negocio
 builder.Services.AddScoped<ILamparaService, LamparaService>();
-builder.Services.AddHttpClient<IClimaService, ClimaService>();
+builder.Services.AddScoped<IClimaService, ClimaService>();
 
 // Registrar servicios de la capa de Infraestructura
 builder.Services.AddScoped<ILamparaRepository, LamparaRepository>();
 builder.Services.AddHttpClient<IESP32Client, ESP32Client>();
+builder.Services.AddHttpClient<IConnectorMeteorologiaAPI, ConectorWeatherAPI>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["WeatherAPI:BaseUrl"] ?? "http://api.weatherapi.com/");
+});
 
 // Registrar BackgroundService para consultas periódicas
 builder.Services.AddHostedService<Presentacion.ESP32BackgroundService>();

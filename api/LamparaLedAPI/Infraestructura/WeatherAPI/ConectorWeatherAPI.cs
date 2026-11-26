@@ -1,5 +1,5 @@
 ﻿using Infraestructura.Meteorologia;
-using System.Globalization;
+using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -7,34 +7,35 @@ namespace Infraestructura.WeatherAPI
 {
     public class ConectorWeatherAPI : IConnectorMeteorologiaAPI
     {
-        private const string API_QUERY = "v1/current.json?key={0}&q={1},{2}&aqi=no";
+        private const string API_QUERY = "v1/current.json?key={0}&q={1}&aqi=no";
 
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly string _apiKey;
 
-
-        public ConectorWeatherAPI(IHttpClientFactory httpClientFactory)
+        public ConectorWeatherAPI(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _httpClientFactory = httpClientFactory;
+            _apiKey = configuration["WeatherAPI:ApiKey"] ?? "";
         }
 
-        public async Task<MeteorologiaDTO> ObtenerDatosMeteorologia(double latitud, double longitud)
+        public async Task<MeteorologiaDTO> ObtenerDatosMeteorologia(string consulta)
         {
-            var client = _httpClientFactory.CreateClient("WeatherAPIService");          
-
-            var result = await client.GetAsync(String.Format(API_QUERY, Convert.ToString(latitud, CultureInfo.InvariantCulture), 
-                Convert.ToString(longitud, CultureInfo.InvariantCulture)));
-
-            var content = await result.Content.ReadAsStringAsync();
-
-            var resultado = System.Text.Json.JsonSerializer.Deserialize<WeatherDTO>(content);
-
-            if (resultado == null)
+            if (string.IsNullOrWhiteSpace(_apiKey))
             {
-                return null;
+                throw new System.Exception("La API key de WeatherAPI no está configurada");
             }
 
-            return resultado.Convertir();
+            var client = _httpClientFactory.CreateClient("WeatherAPIService");
 
+            string query = string.Format(API_QUERY, _apiKey, Uri.EscapeDataString(consulta));
+
+            var response = await client.GetAsync(query);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var resultado = JsonSerializer.Deserialize<WeatherDTO>(content);
+
+            return resultado?.Convertir();
         }
     }
 }

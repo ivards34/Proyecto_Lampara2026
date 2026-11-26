@@ -12,7 +12,7 @@
 | Alumno/s               | Ivar (Sosa)                                       |
 | Nombre del proyecto    | Proyecto Lámpara 2026 (Lámpara LED)               |
 | Repositorio GitHub     | https://github.com/ivards34/Proyecto_Lampara2026  |
-| Fecha de relevamiento  | *(a completar)*                                   |
+| Fecha de relevamiento  |                                    |
 
 ---
 
